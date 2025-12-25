@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: user-service
+
+  # R2DBC Configuration
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/user_db
+    username: ticketing
+    password: ticketing123
+    pool:
+      initial-size: 5
+      max-size: 20
+      max-idle-time: 30m
+
+  # Redis Configuration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: user-service-group
+      key-deserializer: org.apache.kafka.common.deserialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.deserialization.StringDeserializer
+      auto-offset-reset: earliest
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+# JWT Configuration
+jwt:
+  secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-please-change-in-production
+  expiration: 3600000 # 1 hour in milliseconds
+  refresh-expiration: 86400000 # 24 hours in milliseconds
+
+# Server Configuration
+server:
+  port: 8081
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Logging Configuration
+logging:
+  level:
+    com.ticketing.user: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.data.r2dbc: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
