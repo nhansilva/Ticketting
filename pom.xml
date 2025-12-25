@@ -39,7 +39,7 @@
         <!-- Version managed by Spring Boot BOM -->
 
         <!-- Utilities -->
-        <lombok.version>1.18.34</lombok.version>
+        <lombok.version>1.18.38</lombok.version>
         <mapstruct.version>1.6.2</mapstruct.version>
         <!-- Jackson version managed by Spring Boot BOM -->
 
@@ -149,10 +149,11 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version>
+                    <version>3.14.0</version>
                     <configuration>
                         <source>${java.version}</source>
                         <target>${java.version}</target>
+                        <release>${java.version}</release>
                         <annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>

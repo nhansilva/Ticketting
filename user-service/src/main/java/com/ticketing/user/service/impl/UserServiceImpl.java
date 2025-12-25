@@ -15,6 +15,7 @@ import com.ticketing.user.mapper.UserMapper;
 import com.ticketing.user.repository.UserPreferencesRepository;
 import com.ticketing.user.repository.UserRepository;
 import com.ticketing.user.repository.VerificationTokenRepository;
+import com.ticketing.user.service.EmailService;
 import com.ticketing.user.service.JwtService;
 import com.ticketing.user.service.UserService;
 import lombok.RequiredArgsConstructor;
