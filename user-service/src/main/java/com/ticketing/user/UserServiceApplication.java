@@ -8,7 +8,6 @@ import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
  * User Service Application
  */
 @SpringBootApplication
-@EnableR2dbcRepositories
 public class UserServiceApplication {
 
     public static void main(String[] args) {

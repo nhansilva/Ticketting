@@ -29,10 +29,7 @@
         <r2dbc-pool.version>1.0.1.RELEASE</r2dbc-pool.version>
 
         <!-- Redis -->
-
         <spring-data-redis-reactive.version>4.0.1</spring-data-redis-reactive.version>
-        <!-- Versions managed by Spring Boot BOM -->
-        <lettuce.version>6.3.1.RELEASE</lettuce.version>
 
         <!-- Kafka -->
         <spring-kafka.version>4.0.1</spring-kafka.version>
@@ -96,11 +93,6 @@
                 <groupId>org.springframework.data</groupId>
                 <artifactId>spring-data-redis</artifactId>
                 <version>${spring-data-redis-reactive.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.lettuce</groupId>
-                <artifactId>lettuce-core</artifactId>
-                <version>${lettuce.version}</version>
             </dependency>
 
             <!-- Kafka -->
