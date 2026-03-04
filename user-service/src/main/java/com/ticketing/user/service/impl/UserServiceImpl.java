@@ -15,6 +15,7 @@ import com.ticketing.user.mapper.UserMapper;
 import com.ticketing.user.repository.UserPreferencesRepository;
 import com.ticketing.user.repository.UserRepository;
 import com.ticketing.user.repository.VerificationTokenRepository;
+import com.ticketing.user.service.EmailService;
 import com.ticketing.user.service.JwtService;
 import com.ticketing.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -186,22 +187,27 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<UserResponse> verifyEmail(String token) {
-        LocalDateTime now = LocalDateTime.now();
-        return tokenRepository.findValidToken(token, VerificationToken.TokenType.EMAIL_VERIFICATION, now)
-                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired verification token")))
-                .flatMap(verificationToken -> {
-                    verificationToken.setUsedAt(now);
-                    return tokenRepository.save(verificationToken)
-                            .flatMap(vt -> userRepository.findById(vt.getUserId()))
-                            .flatMap(user -> {
-                                user.setEmailVerified(true);
-                                user.setStatus(User.UserStatus.ACTIVE);
-                                user.setUpdatedAt(now);
-                                return userRepository.save(user)
-                                        .map(userMapper::toResponse);
-                            });
-                });
+        return null;
     }
+
+//    @Override
+//    public Mono<UserResponse> verifyEmail(String token) {
+//        LocalDateTime now = LocalDateTime.now();
+//        return tokenRepository.findValidToken(token, VerificationToken.TokenType.EMAIL_VERIFICATION, now)
+//                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired verification token")))
+//                .flatMap(verificationToken -> {
+//                    verificationToken.setUsedAt(now);
+//                    return tokenRepository.save(verificationToken)
+//                            .flatMap(vt -> userRepository.findById(vt.getUserId()))
+//                            .flatMap(user -> {
+//                                user.setEmailVerified(true);
+//                                user.setStatus(User.UserStatus.ACTIVE);
+//                                user.setUpdatedAt(now);
+//                                return userRepository.save(user)
+//                                        .map(userMapper::toResponse);
+//                            });
+//                });
+//    }
 
     @Override
     public Mono<Void> sendVerificationEmail(String email) {
@@ -250,25 +256,30 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<Void> resetPassword(ResetPasswordRequest request) {
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            return Mono.error(new IllegalArgumentException("Passwords do not match"));
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        return tokenRepository.findValidToken(request.getToken(), VerificationToken.TokenType.PASSWORD_RESET, now)
-                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired reset token")))
-                .flatMap(resetToken -> {
-                    resetToken.setUsedAt(now);
-                    return tokenRepository.save(resetToken)
-                            .flatMap(rt -> userRepository.findById(rt.getUserId()))
-                            .flatMap(user -> {
-                                user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-                                user.setUpdatedAt(now);
-                                return userRepository.save(user)
-                                        .then();
-                            });
-                });
+        return null;
     }
+
+//    @Override
+//    public Mono<Void> resetPassword(ResetPasswordRequest request) {
+//        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+//            return Mono.error(new IllegalArgumentException("Passwords do not match"));
+//        }
+//
+//        LocalDateTime now = LocalDateTime.now();
+//        return tokenRepository.findValidToken(request.getToken(), VerificationToken.TokenType.PASSWORD_RESET, now)
+//                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired reset token")))
+//                .flatMap(resetToken -> {
+//                    resetToken.setUsedAt(now);
+//                    return tokenRepository.save(resetToken)
+//                            .flatMap(rt -> userRepository.findById(rt.getUserId()))
+//                            .flatMap(user -> {
+//                                user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+//                                user.setUpdatedAt(now);
+//                                return userRepository.save(user)
+//                                        .then();
+//                            });
+//                });
+//    }
 
     @Override
     public Mono<UserPreferencesResponse> getPreferences(UUID userId) {

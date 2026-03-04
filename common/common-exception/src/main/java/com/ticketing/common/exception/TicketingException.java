@@ -1,10 +1,12 @@
 package com.ticketing.common.exception;
 
 import com.ticketing.common.dto.constants.Constants;
+import lombok.Getter;
 
 /**
  * Base exception for ticketing system
  */
+@Getter
 public class TicketingException extends RuntimeException {
     private final String errorCode;
 
@@ -28,8 +30,5 @@ public class TicketingException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
-    public String getErrorCode() {
-        return errorCode;
-    }
 }
 

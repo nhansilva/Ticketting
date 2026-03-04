@@ -2,6 +2,7 @@ package com.ticketing.user.controller;
 
 import com.ticketing.common.dto.response.ApiResponse;
 import com.ticketing.user.dto.request.*;
+import com.ticketing.user.dto.response.ChangePasswordResponse;
 import com.ticketing.user.dto.response.LoginResponse;
 import com.ticketing.user.dto.response.UserPreferencesResponse;
 import com.ticketing.user.dto.response.UserResponse;
@@ -15,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -101,11 +103,17 @@ public class UserController {
      * Change password
      */
     @PutMapping("/password/change")
-    public Mono<ResponseEntity<ApiResponse<Void>>> changePassword(
+    public Mono<ResponseEntity<ApiResponse<ChangePasswordResponse>>> changePassword(
             @AuthenticationPrincipal UUID userId,
             @Valid @RequestBody ChangePasswordRequest request) {
         return userService.changePassword(userId, request)
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Password changed successfully", null))))
+                .then(Mono.fromSupplier(() -> {
+                    ChangePasswordResponse response = ChangePasswordResponse.builder()
+                            .changed(true)
+                            .changedAt(LocalDateTime.now())
+                            .build();
+                    return ResponseEntity.ok(ApiResponse.success("Password changed successfully", response));
+                }))
                 .doOnError(error -> log.error("Change password error: {}", error.getMessage()));
     }
 
@@ -127,7 +135,7 @@ public class UserController {
     public Mono<ResponseEntity<ApiResponse<Void>>> sendVerificationEmail(
             @RequestBody SendVerificationEmailRequest request) {
         return userService.sendVerificationEmail(request.getEmail())
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Verification email sent", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Verification email sent", null))))
                 .doOnError(error -> log.error("Send verification email error: {}", error.getMessage()));
     }
 
@@ -139,7 +147,7 @@ public class UserController {
             @AuthenticationPrincipal UUID userId) {
         return userService.getUserById(userId)
                 .flatMap(user -> userService.sendVerificationEmail(user.getEmail()))
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Verification email resent", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Verification email resent", null))))
                 .doOnError(error -> log.error("Resend verification email error: {}", error.getMessage()));
     }
 
@@ -150,7 +158,7 @@ public class UserController {
     public Mono<ResponseEntity<ApiResponse<Void>>> forgotPassword(
             @RequestBody ForgotPasswordRequest request) {
         return userService.forgotPassword(request.getEmail())
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Password reset link sent to your email", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Password reset link sent to your email", null))))
                 .doOnError(error -> log.error("Forgot password error: {}", error.getMessage()));
     }
 
@@ -161,7 +169,7 @@ public class UserController {
     public Mono<ResponseEntity<ApiResponse<Void>>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
         return userService.resetPassword(request)
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Password reset successfully", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Password reset successfully", null))))
                 .doOnError(error -> log.error("Reset password error: {}", error.getMessage()));
     }
 
@@ -213,7 +221,7 @@ public class UserController {
             @AuthenticationPrincipal UUID userId,
             @RequestBody DeactivateAccountRequest request) {
         return userService.deactivateAccount(userId, request.getPassword())
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Account deactivated successfully", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Account deactivated successfully", null))))
                 .doOnError(error -> log.error("Deactivate account error: {}", error.getMessage()));
     }
 
@@ -224,7 +232,7 @@ public class UserController {
     public Mono<ResponseEntity<ApiResponse<Void>>> reactivateAccount(
             @RequestBody ReactivateAccountRequest request) {
         return userService.reactivateAccount(request.getEmail(), request.getPassword())
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Account reactivated successfully", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Account reactivated successfully", null))))
                 .doOnError(error -> log.error("Reactivate account error: {}", error.getMessage()));
     }
 
@@ -236,7 +244,7 @@ public class UserController {
             @AuthenticationPrincipal UUID userId,
             @RequestBody DeleteAccountRequest request) {
         return userService.deleteAccount(userId, request.getPassword())
-                .then(Mono.just(ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null))))
+                .then(Mono.just(ResponseEntity.ok(ApiResponse.<Void>success("Account deleted successfully", null))))
                 .doOnError(error -> log.error("Delete account error: {}", error.getMessage()));
     }
 
