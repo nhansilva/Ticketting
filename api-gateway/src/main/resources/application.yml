@@ -1,0 +1,105 @@
+spring:
+  application:
+    name: api-gateway
+
+  # Redis — Rate Limiting
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  # Spring Cloud Gateway
+  cloud:
+    gateway:
+      default-filters:
+        - name: DedupeResponseHeader
+          args:
+            name: Access-Control-Allow-Origin Access-Control-Allow-Credentials
+            strategy: RETAIN_UNIQUE
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost:[*]"
+              - "https://*.ticketing.com"
+            allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
+            allowedHeaders: ["*"]
+            allowCredentials: true
+            maxAge: 3600
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 30s
+        pool:
+          max-connections: 500
+          acquire-timeout: 5000
+
+# JWT — phải khớp hoàn toàn với user-service
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-please-change-in-production}
+
+# Downstream service URLs
+services:
+  user-service:    ${USER_SERVICE_URL:http://localhost:8081}
+  event-catalog:   ${EVENT_CATALOG_URL:http://localhost:8082}
+  booking:         ${BOOKING_URL:http://localhost:8083}
+  payment:         ${PAYMENT_URL:http://localhost:8084}
+  search:          ${SEARCH_URL:http://localhost:8086}
+  cms:             ${CMS_URL:http://localhost:8087}
+  media:           ${MEDIA_URL:http://localhost:8088}
+
+# Server
+server:
+  port: ${SERVER_PORT:8080}
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+# OpenAPI — Swagger UI aggregate tất cả services
+# Truy cập: http://localhost:8080/swagger-ui.html
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: user-service
+        url: /v3/api-docs/user-service
+      - name: event-catalog-service
+        url: /v3/api-docs/event-catalog-service
+      - name: booking-service
+        url: /v3/api-docs/booking-service
+      - name: payment-service
+        url: /v3/api-docs/payment-service
+      - name: search-service
+        url: /v3/api-docs/search-service
+      - name: cms-service
+        url: /v3/api-docs/cms-service
+      - name: media-service
+        url: /v3/api-docs/media-service
+    urls-primary-name: user-service
+    operationsSorter: method
+    disable-swagger-default-url: true
+  api-docs:
+    enabled: false  # Gateway không có API riêng, chỉ serve UI
+
+# Logging
+logging:
+  level:
+    com.ticketing.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%X{correlationId}] %-5level %logger{36} - %msg%n"

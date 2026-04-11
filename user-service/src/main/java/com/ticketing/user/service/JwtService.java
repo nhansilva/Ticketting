@@ -37,7 +37,7 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId().toString());
         claims.put("email", user.getEmail());
-        claims.put("role", "USER"); // Can be extended for role-based access
+        claims.put("role", user.getRole() != null ? user.getRole().name() : User.UserRole.CUSTOMER.name());
         
         return createToken(claims, user.getEmail(), expiration);
     }
@@ -75,6 +75,13 @@ public class JwtService {
     public UUID getUserIdFromToken(String token) {
         String userIdStr = extractClaim(token, claims -> claims.get("userId", String.class));
         return UUID.fromString(userIdStr);
+    }
+
+    /**
+     * Extract role from token — used by API Gateway to forward X-User-Role header
+     */
+    public String getRoleFromToken(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     /**

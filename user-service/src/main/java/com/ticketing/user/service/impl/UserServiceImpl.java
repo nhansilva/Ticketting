@@ -67,6 +67,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(request.getPhoneNumber())
                 .dateOfBirth(request.getDateOfBirth())
                 .emailVerified(false)
+                .role(User.UserRole.CUSTOMER)
                 .status(User.UserStatus.PENDING_VERIFICATION)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -121,8 +122,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<LoginResponse> refreshToken(String refreshToken) {
-        // TODO: Implement refresh token validation and generation
-        return Mono.error(new UnsupportedOperationException("Not implemented yet"));
+        return Mono.fromCallable(() -> {
+                    String tokenType = jwtService.extractClaim(refreshToken,
+                            claims -> claims.get("type", String.class));
+                    if (!"refresh".equals(tokenType)) {
+                        throw new InvalidTokenException("Not a refresh token");
+                    }
+                    return jwtService.getUserIdFromToken(refreshToken);
+                })
+                .onErrorMap(InvalidTokenException.class, e -> e)
+                .onErrorMap(e -> !(e instanceof InvalidTokenException),
+                        e -> new InvalidTokenException("Invalid or expired refresh token"))
+                .flatMap(userId -> userRepository.findById(userId))
+                .filter(user -> user.getStatus() == User.UserStatus.ACTIVE && user.getDeletedAt() == null)
+                .switchIfEmpty(Mono.error(new InvalidCredentialsException("User not found or inactive")))
+                .map(user -> LoginResponse.builder()
+                        .token(jwtService.generateToken(user))
+                        .refreshToken(jwtService.generateRefreshToken(user))
+                        .expiresIn(3600L)
+                        .user(userMapper.toResponse(user))
+                        .build());
     }
 
     @Override
@@ -187,27 +206,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<UserResponse> verifyEmail(String token) {
-        return null;
+        LocalDateTime now = LocalDateTime.now();
+        return tokenRepository.findValidToken(token, VerificationToken.TokenType.EMAIL_VERIFICATION, now)
+                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired verification token")))
+                .flatMap(verificationToken -> {
+                    verificationToken.setUsedAt(now);
+                    return tokenRepository.save(verificationToken)
+                            .flatMap(vt -> userRepository.findById(vt.getUserId()))
+                            .switchIfEmpty(Mono.error(new UserNotFoundException("User not found")))
+                            .flatMap(user -> {
+                                user.setEmailVerified(true);
+                                user.setStatus(User.UserStatus.ACTIVE);
+                                user.setUpdatedAt(now);
+                                return userRepository.save(user)
+                                        .map(userMapper::toResponse);
+                            });
+                });
     }
-
-//    @Override
-//    public Mono<UserResponse> verifyEmail(String token) {
-//        LocalDateTime now = LocalDateTime.now();
-//        return tokenRepository.findValidToken(token, VerificationToken.TokenType.EMAIL_VERIFICATION, now)
-//                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired verification token")))
-//                .flatMap(verificationToken -> {
-//                    verificationToken.setUsedAt(now);
-//                    return tokenRepository.save(verificationToken)
-//                            .flatMap(vt -> userRepository.findById(vt.getUserId()))
-//                            .flatMap(user -> {
-//                                user.setEmailVerified(true);
-//                                user.setStatus(User.UserStatus.ACTIVE);
-//                                user.setUpdatedAt(now);
-//                                return userRepository.save(user)
-//                                        .map(userMapper::toResponse);
-//                            });
-//                });
-//    }
 
     @Override
     public Mono<Void> sendVerificationEmail(String email) {
@@ -256,30 +271,25 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<Void> resetPassword(ResetPasswordRequest request) {
-        return null;
-    }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            return Mono.error(new IllegalArgumentException("Passwords do not match"));
+        }
 
-//    @Override
-//    public Mono<Void> resetPassword(ResetPasswordRequest request) {
-//        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-//            return Mono.error(new IllegalArgumentException("Passwords do not match"));
-//        }
-//
-//        LocalDateTime now = LocalDateTime.now();
-//        return tokenRepository.findValidToken(request.getToken(), VerificationToken.TokenType.PASSWORD_RESET, now)
-//                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired reset token")))
-//                .flatMap(resetToken -> {
-//                    resetToken.setUsedAt(now);
-//                    return tokenRepository.save(resetToken)
-//                            .flatMap(rt -> userRepository.findById(rt.getUserId()))
-//                            .flatMap(user -> {
-//                                user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-//                                user.setUpdatedAt(now);
-//                                return userRepository.save(user)
-//                                        .then();
-//                            });
-//                });
-//    }
+        LocalDateTime now = LocalDateTime.now();
+        return tokenRepository.findValidToken(request.getToken(), VerificationToken.TokenType.PASSWORD_RESET, now)
+                .switchIfEmpty(Mono.error(new InvalidTokenException("Invalid or expired reset token")))
+                .flatMap(resetToken -> {
+                    resetToken.setUsedAt(now);
+                    return tokenRepository.save(resetToken)
+                            .flatMap(rt -> userRepository.findById(rt.getUserId()))
+                            .switchIfEmpty(Mono.error(new UserNotFoundException("User not found")))
+                            .flatMap(user -> {
+                                user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+                                user.setUpdatedAt(now);
+                                return userRepository.save(user).then();
+                            });
+                });
+    }
 
     @Override
     public Mono<UserPreferencesResponse> getPreferences(UUID userId) {
@@ -368,6 +378,46 @@ public class UserServiceImpl implements UserService {
                     user.setUpdatedAt(LocalDateTime.now());
                     return userRepository.save(user)
                             .then();
+                });
+    }
+
+    @Override
+    public Mono<UserResponse> createAdminUser(RegisterRequest request) {
+        return userRepository.existsByEmail(request.getEmail())
+                .flatMap(exists -> {
+                    if (exists) {
+                        return Mono.error(new EmailAlreadyExistsException("Email already registered"));
+                    }
+                    User admin = User.builder()
+                            .id(UUID.randomUUID())
+                            .email(request.getEmail().toLowerCase())
+                            .passwordHash(passwordEncoder.encode(request.getPassword()))
+                            .firstName(request.getFirstName())
+                            .lastName(request.getLastName())
+                            .phoneNumber(request.getPhoneNumber())
+                            .dateOfBirth(request.getDateOfBirth())
+                            .emailVerified(true)
+                            .role(User.UserRole.ADMIN)
+                            .status(User.UserStatus.ACTIVE)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+                    return userRepository.save(admin);
+                })
+                .flatMap(savedAdmin -> {
+                    UserPreferences preferences = UserPreferences.builder()
+                            .id(UUID.randomUUID())
+                            .userId(savedAdmin.getId())
+                            .emailNotifications(true)
+                            .smsNotifications(false)
+                            .pushNotifications(true)
+                            .preferredLanguage("en")
+                            .timezone("Asia/Ho_Chi_Minh")
+                            .currency("VND")
+                            .marketingEmails(false)
+                            .build();
+                    return preferencesRepository.save(preferences)
+                            .thenReturn(userMapper.toResponse(savedAdmin));
                 });
     }
 

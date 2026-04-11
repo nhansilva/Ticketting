@@ -35,14 +35,15 @@ public class JwtAuthenticationFilter implements WebFilter {
         if (StringUtils.hasText(token) && jwtService.validateToken(token, jwtService.getEmailFromToken(token))) {
             try {
                 UUID userId = jwtService.getUserIdFromToken(token);
-                String email = jwtService.getEmailFromToken(token);
-                
+                String role = jwtService.getRoleFromToken(token);
+                String grantedRole = "ROLE_" + (role != null ? role : "CUSTOMER");
+
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                         userId,
                         null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                        Collections.singletonList(new SimpleGrantedAuthority(grantedRole))
                 );
-                
+
                 return chain.filter(exchange)
                         .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
             } catch (Exception e) {

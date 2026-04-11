@@ -1,81 +1,298 @@
 version: '3.8'
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  Ticketing Platform — Full Infrastructure Stack
+#
+#  Start all:         docker compose up -d
+#  Start infra only:  docker compose up -d postgres redis mongodb zookeeper kafka elasticsearch rabbitmq
+#  Stop all:          docker compose down
+#  Reset volumes:     docker compose down -v
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  ticketing-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongodb_data:
+  elasticsearch_data:
+  rabbitmq_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:
+  zipkin_data:
+
 services:
-  # PostgreSQL Database
+
+  # ══════════════════════════════════════════════════════════════════════════
+  #  DATABASES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # PostgreSQL — user-service, booking-service, payment-service, media-service
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: ticketing-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ticketing
       POSTGRES_PASSWORD: ticketing123
       POSTGRES_DB: ticketing_db
+      # Tạo thêm DB cho các service khác nhau (init script)
+      POSTGRES_MULTIPLE_DATABASES: user_db,booking_db,payment_db,media_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+    networks:
+      - ticketing-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ticketing"]
+      test: ["CMD-SHELL", "pg_isready -U ticketing -d ticketing_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
 
-  # Redis Cache & Locks
+  # MongoDB — event-catalog-service, cms-service
+  mongodb:
+    image: mongo:7-jammy
+    container_name: ticketing-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ticketing
+      MONGO_INITDB_ROOT_PASSWORD: ticketing123
+      MONGO_INITDB_DATABASE: ticketing
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongodb/init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks:
+      - ticketing-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════════════════════
+  #  CACHE & LOCK
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # Redis — cache, distributed lock, rate limiting, seat lock TTL
   redis:
     image: redis:7-alpine
     container_name: ticketing-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    networks:
+      - ticketing-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Kafka (Optional - for event streaming)
+  # ══════════════════════════════════════════════════════════════════════════
+  #  MESSAGE QUEUES
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # Zookeeper — required by Kafka
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: confluentinc/cp-zookeeper:7.6.0
     container_name: ticketing-zookeeper
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
     ports:
       - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    networks:
+      - ticketing-net
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Kafka — event streaming giữa các services
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.6.0
     container_name: ticketing-kafka
+    restart: unless-stopped
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
+      - "29092:29092"   # internal listener cho Docker network
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # PLAINTEXT_HOST: dùng từ host machine (localhost:9092)
+      # PLAINTEXT:      dùng trong Docker network (kafka:29092)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168     # 7 ngày
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - ticketing-net
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
 
-  # Kafka UI (Optional - for monitoring)
+  # RabbitMQ — optional messaging, DLX pattern
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ticketing-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ticketing
+      RABBITMQ_DEFAULT_PASS: ticketing123
+      RABBITMQ_DEFAULT_VHOST: ticketing
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ticketing-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ══════════════════════════════════════════════════════════════════════════
+  #  SEARCH
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # Elasticsearch — search-service (full-text search, filter, suggest)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: ticketing-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false   # Tắt auth cho dev
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+      - cluster.name=ticketing-cluster
+      - node.name=es-node-1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - ticketing-net
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -v '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ══════════════════════════════════════════════════════════════════════════
+  #  OBSERVABILITY
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # Zipkin — distributed tracing (Micrometer → Zipkin)
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: ticketing-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+    volumes:
+      - zipkin_data:/zipkin
+    networks:
+      - ticketing-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9411/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ══════════════════════════════════════════════════════════════════════════
+  #  MANAGEMENT UIs
+  # ══════════════════════════════════════════════════════════════════════════
+
+  # Kafka UI — monitor topics, messages, consumer groups
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: ticketing-kafka-ui
+    restart: unless-stopped
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
-      - "8080:8080"
+      - "9000:8080"   # :9000 để tránh conflict với api-gateway :8080
     environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_NAME: ticketing-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - ticketing-net
 
-volumes:
-  postgres_data:
-  redis_data:
+  # Redis Insight — browse Redis keys, monitor memory
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: ticketing-redis-insight
+    restart: unless-stopped
+    depends_on:
+      - redis
+    ports:
+      - "5540:5540"
+    networks:
+      - ticketing-net
 
+  # Mongo Express — browse MongoDB collections
+  mongo-express:
+    image: mongo-express:1.0-20-alpine3.19
+    container_name: ticketing-mongo-express
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "8081:8081"   # KHÔNG conflict — user-service chạy local :8081, đây là Docker UI
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ticketing
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ticketing123
+      ME_CONFIG_MONGODB_URL: mongodb://ticketing:ticketing123@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    networks:
+      - ticketing-net

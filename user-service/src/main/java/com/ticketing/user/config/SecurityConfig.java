@@ -37,6 +37,12 @@ public class SecurityConfig {
                         .pathMatchers("/api/v1/users/account/reactivate").permitAll()
                         .pathMatchers("/api/v1/users/health").permitAll()
                         .pathMatchers("/actuator/health").permitAll()
+                        // Swagger UI
+                        .pathMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .pathMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll()
+                        .pathMatchers("/webjars/**").permitAll()
+                        // Admin-only endpoints
+                        .pathMatchers("/api/v1/users/admin/**").hasRole("ADMIN")
                         // Protected endpoints
                         .anyExchange().authenticated()
                 )

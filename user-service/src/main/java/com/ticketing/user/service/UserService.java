@@ -97,5 +97,10 @@ public interface UserService {
      * Delete account
      */
     Mono<Void> deleteAccount(UUID userId, String password);
+
+    /**
+     * Create admin user — only callable by existing ADMIN
+     */
+    Mono<UserResponse> createAdminUser(RegisterRequest request);
 }
 

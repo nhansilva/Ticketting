@@ -95,25 +95,13 @@
         <!-- Common Modules -->
         <dependency>
             <groupId>com.ticketing</groupId>
-            <artifactId>common-dto</artifactId>
+            <artifactId>common-entity</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.ticketing</groupId>
-            <artifactId>common-exception</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.ticketing</groupId>
-            <artifactId>common-config</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.ticketing</groupId>
-            <artifactId>common-utils</artifactId>
+            <artifactId>common-base</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -127,6 +115,12 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <!-- OpenAPI / Swagger -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
         </dependency>
 
         <!-- Testing -->
