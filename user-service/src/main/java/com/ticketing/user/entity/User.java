@@ -62,6 +62,9 @@ public class User {
     @Column("last_login_at")
     private LocalDateTime lastLoginAt;
 
+    @Column("role")
+    private UserRole role;
+
     @Column("deleted_at")
     private LocalDateTime deletedAt;
 
@@ -74,6 +77,14 @@ public class User {
         INACTIVE,
         SUSPENDED,
         DELETED
+    }
+
+    /**
+     * User role enumeration
+     */
+    public enum UserRole {
+        CUSTOMER,
+        ADMIN
     }
 }
 

@@ -26,6 +26,7 @@ public class UserResponse {
     private LocalDate dateOfBirth;
     private String profileImageUrl;
     private Boolean emailVerified;
+    private String role;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

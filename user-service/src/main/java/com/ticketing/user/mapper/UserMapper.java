@@ -15,6 +15,7 @@ public interface UserMapper {
 
     @Mapping(source = "id", target = "userId")
     @Mapping(target = "status", expression = "java(user.getStatus() != null ? user.getStatus().name() : null)")
+    @Mapping(target = "role", expression = "java(user.getRole() != null ? user.getRole().name() : null)")
     UserResponse toResponse(User user);
 
     @Mapping(source = "userId", target = "userId")

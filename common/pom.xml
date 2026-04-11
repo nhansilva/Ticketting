@@ -18,10 +18,8 @@
     <description>Shared common modules for all services</description>
 
     <modules>
-        <module>common-dto</module>
-        <module>common-exception</module>
-        <module>common-config</module>
-        <module>common-utils</module>
+        <module>common-entity</module>
+        <module>common-base</module>
     </modules>
 
 </project>

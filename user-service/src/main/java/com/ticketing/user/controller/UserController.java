@@ -7,6 +7,11 @@ import com.ticketing.user.dto.response.LoginResponse;
 import com.ticketing.user.dto.response.UserPreferencesResponse;
 import com.ticketing.user.dto.response.UserResponse;
 import com.ticketing.user.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +24,7 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * User controller
- */
+@Tag(name = "Users", description = "User registration, authentication, and profile management")
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
@@ -30,9 +33,7 @@ public class UserController {
 
     private final UserService userService;
 
-    /**
-     * Register new user
-     */
+    @Operation(summary = "Register new user", description = "Create account and send verification email")
     @PostMapping("/register")
     public Mono<ResponseEntity<ApiResponse<UserResponse>>> register(
             @Valid @RequestBody RegisterRequest request) {
@@ -43,9 +44,7 @@ public class UserController {
                 .doOnError(error -> log.error("Registration error: {}", error.getMessage()));
     }
 
-    /**
-     * Login user
-     */
+    @Operation(summary = "Login", description = "Authenticate and receive access + refresh tokens")
     @PostMapping("/login")
     public Mono<ResponseEntity<ApiResponse<LoginResponse>>> login(
             @Valid @RequestBody LoginRequest request) {
@@ -54,9 +53,7 @@ public class UserController {
                 .doOnError(error -> log.error("Login error: {}", error.getMessage()));
     }
 
-    /**
-     * Refresh token
-     */
+    @Operation(summary = "Refresh token", description = "Exchange refresh token for new access + refresh token pair")
     @PostMapping("/refresh-token")
     public Mono<ResponseEntity<ApiResponse<LoginResponse>>> refreshToken(
             @RequestBody RefreshTokenRequest request) {
@@ -65,9 +62,7 @@ public class UserController {
                 .doOnError(error -> log.error("Refresh token error: {}", error.getMessage()));
     }
 
-    /**
-     * Get current user profile
-     */
+    @Operation(summary = "Get my profile", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/profile")
     public Mono<ResponseEntity<ApiResponse<UserResponse>>> getCurrentUser(
             @AuthenticationPrincipal UUID userId) {
@@ -76,9 +71,7 @@ public class UserController {
                 .doOnError(error -> log.error("Get profile error: {}", error.getMessage()));
     }
 
-    /**
-     * Get user by ID
-     */
+    @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/{userId}")
     public Mono<ResponseEntity<ApiResponse<UserResponse>>> getUserById(
             @PathVariable UUID userId) {
@@ -87,9 +80,7 @@ public class UserController {
                 .doOnError(error -> log.error("Get user error: {}", error.getMessage()));
     }
 
-    /**
-     * Update user profile
-     */
+    @Operation(summary = "Update profile", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/profile")
     public Mono<ResponseEntity<ApiResponse<UserResponse>>> updateProfile(
             @AuthenticationPrincipal UUID userId,
@@ -99,9 +90,7 @@ public class UserController {
                 .doOnError(error -> log.error("Update profile error: {}", error.getMessage()));
     }
 
-    /**
-     * Change password
-     */
+    @Operation(summary = "Change password", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/password/change")
     public Mono<ResponseEntity<ApiResponse<ChangePasswordResponse>>> changePassword(
             @AuthenticationPrincipal UUID userId,
@@ -117,9 +106,7 @@ public class UserController {
                 .doOnError(error -> log.error("Change password error: {}", error.getMessage()));
     }
 
-    /**
-     * Verify email
-     */
+    @Operation(summary = "Verify email", description = "Token sent via email link")
     @GetMapping("/verification/verify")
     public Mono<ResponseEntity<ApiResponse<UserResponse>>> verifyEmail(
             @RequestParam String token) {
@@ -128,9 +115,7 @@ public class UserController {
                 .doOnError(error -> log.error("Verify email error: {}", error.getMessage()));
     }
 
-    /**
-     * Send verification email
-     */
+    @Operation(summary = "Send verification email")
     @PostMapping("/verification/send")
     public Mono<ResponseEntity<ApiResponse<Void>>> sendVerificationEmail(
             @RequestBody SendVerificationEmailRequest request) {
@@ -139,9 +124,7 @@ public class UserController {
                 .doOnError(error -> log.error("Send verification email error: {}", error.getMessage()));
     }
 
-    /**
-     * Resend verification email
-     */
+    @Operation(summary = "Resend verification email", security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/verification/resend")
     public Mono<ResponseEntity<ApiResponse<Void>>> resendVerificationEmail(
             @AuthenticationPrincipal UUID userId) {
@@ -151,9 +134,7 @@ public class UserController {
                 .doOnError(error -> log.error("Resend verification email error: {}", error.getMessage()));
     }
 
-    /**
-     * Forgot password
-     */
+    @Operation(summary = "Forgot password", description = "Send password reset link to email")
     @PostMapping("/password/forgot")
     public Mono<ResponseEntity<ApiResponse<Void>>> forgotPassword(
             @RequestBody ForgotPasswordRequest request) {
@@ -162,9 +143,7 @@ public class UserController {
                 .doOnError(error -> log.error("Forgot password error: {}", error.getMessage()));
     }
 
-    /**
-     * Reset password
-     */
+    @Operation(summary = "Reset password", description = "Use token from email to set new password")
     @PostMapping("/password/reset")
     public Mono<ResponseEntity<ApiResponse<Void>>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
@@ -173,9 +152,7 @@ public class UserController {
                 .doOnError(error -> log.error("Reset password error: {}", error.getMessage()));
     }
 
-    /**
-     * Get user preferences
-     */
+    @Operation(summary = "Get preferences", security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/preferences")
     public Mono<ResponseEntity<ApiResponse<UserPreferencesResponse>>> getPreferences(
             @AuthenticationPrincipal UUID userId) {
@@ -184,9 +161,7 @@ public class UserController {
                 .doOnError(error -> log.error("Get preferences error: {}", error.getMessage()));
     }
 
-    /**
-     * Update user preferences
-     */
+    @Operation(summary = "Update preferences", security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/preferences")
     public Mono<ResponseEntity<ApiResponse<UserPreferencesResponse>>> updatePreferences(
             @AuthenticationPrincipal UUID userId,
@@ -196,9 +171,7 @@ public class UserController {
                 .doOnError(error -> log.error("Update preferences error: {}", error.getMessage()));
     }
 
-    /**
-     * Check email availability
-     */
+    @Operation(summary = "Check email availability")
     @GetMapping("/check-email")
     public Mono<ResponseEntity<ApiResponse<EmailAvailabilityResponse>>> checkEmailAvailability(
             @RequestParam String email) {
@@ -213,9 +186,7 @@ public class UserController {
                 .doOnError(error -> log.error("Check email availability error: {}", error.getMessage()));
     }
 
-    /**
-     * Deactivate account
-     */
+    @Operation(summary = "Deactivate account", security = @SecurityRequirement(name = "bearerAuth"))
     @PostMapping("/account/deactivate")
     public Mono<ResponseEntity<ApiResponse<Void>>> deactivateAccount(
             @AuthenticationPrincipal UUID userId,
@@ -225,9 +196,7 @@ public class UserController {
                 .doOnError(error -> log.error("Deactivate account error: {}", error.getMessage()));
     }
 
-    /**
-     * Reactivate account
-     */
+    @Operation(summary = "Reactivate account")
     @PostMapping("/account/reactivate")
     public Mono<ResponseEntity<ApiResponse<Void>>> reactivateAccount(
             @RequestBody ReactivateAccountRequest request) {
@@ -236,9 +205,7 @@ public class UserController {
                 .doOnError(error -> log.error("Reactivate account error: {}", error.getMessage()));
     }
 
-    /**
-     * Delete account
-     */
+    @Operation(summary = "Delete account (soft delete)", security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/account")
     public Mono<ResponseEntity<ApiResponse<Void>>> deleteAccount(
             @AuthenticationPrincipal UUID userId,
@@ -248,9 +215,18 @@ public class UserController {
                 .doOnError(error -> log.error("Delete account error: {}", error.getMessage()));
     }
 
-    /**
-     * Health check
-     */
+    @Operation(summary = "Create admin user", description = "ADMIN only",
+               security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping("/admin/create")
+    public Mono<ResponseEntity<ApiResponse<UserResponse>>> createAdminUser(
+            @Valid @RequestBody RegisterRequest request) {
+        return userService.createAdminUser(request)
+                .map(user -> ResponseEntity.status(HttpStatus.CREATED)
+                        .body(ApiResponse.success("Admin user created successfully", user)))
+                .doOnError(error -> log.error("Create admin error: {}", error.getMessage()));
+    }
+
+    @Operation(summary = "Health check", description = "Service liveness probe")
     @GetMapping("/health")
     public Mono<ResponseEntity<ApiResponse<HealthResponse>>> health() {
         HealthResponse health = HealthResponse.builder()
