@@ -2,12 +2,12 @@ package com.ticketing.user;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 
 /**
  * User Service Application
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = RedisRepositoriesAutoConfiguration.class)
 public class UserServiceApplication {
 
     public static void main(String[] args) {

@@ -1,197 +1,223 @@
 # PLANNING.md — Event Ticketing Platform
 
-> Cập nhật: 2026-04-11
-> Trạng thái tổng thể: **Phase 1 — user-service + api-gateway hoàn thành ✅, tiếp theo: event-catalog-service**
+> Cập nhật: 2026-04-12
+> Trạng thái tổng thể: **Phase 1 gần hoàn thành — user-service ✅, api-gateway ✅, ticketing-client 🟡, Google OAuth2 🟡 (cần điền credentials)**
 
 ---
 
 ## Tình trạng hiện tại
 
-| Service | Trạng thái | Ghi chú |
+| Service / Module | Trạng thái | Ghi chú |
 |---|---|---|
-| `user-service` | 🟢 Done | Hoàn thành 2026-04-11 |
-| `api-gateway` | 🟢 Done | Hoàn thành 2026-04-11 |
-| `event-catalog-service` | 🔴 Chưa bắt đầu | — |
+| `common-entity` | 🟢 Done | DTOs, enums, constants, interfaces |
+| `common-base` | 🟢 Done | Config, exception, cache, lock, ratelimit, messaging |
+| `user-service` | 🟢 Done | Auth, profile, JWT, Google OAuth2 code xong |
+| `api-gateway` | 🟢 Done | JWT filter, rate limit, correlation ID |
+| `ticketing-client` | 🟡 In Progress | Auth pages ✅, Home ✅, Google OAuth2 callback ✅ — cần test e2e |
+| `event-catalog-service` | 🔴 Chưa bắt đầu | Next priority |
 | `booking-service` | 🔴 Chưa bắt đầu | — |
 | `payment-service` | 🔴 Chưa bắt đầu | — |
 | `notification-service` | 🔴 Chưa bắt đầu | — |
 | `search-service` | 🔴 Chưa bắt đầu | — |
 | `cms-service` | 🔴 Chưa bắt đầu | — |
 | `media-service` | 🔴 Chưa bắt đầu | — |
-| `common` | 🟢 Done | dto, exception, config, utils |
 
 ---
 
-## Phase 1 — Core Foundation (ưu tiên cao nhất)
+## Phase 1 — Core Foundation
 
-### 1.1 Hoàn thiện `user-service` ✅ Hoàn thành 2026-04-11
+### 1.1 `common` library ✅ Hoàn thành 2026-04-11
 
-- [x] Implement `refreshToken` — validate claim `type=refresh`, generate cặp token mới
-- [x] Fix `verifyEmail` + `resetPassword` (đang `return null`)
-- [x] Uncomment `findValidToken` trong `VerificationTokenRepository`
-- [x] Fix `JwtAuthenticationFilter` — dùng role thực từ token thay vì hardcode `ROLE_USER`
-- [x] `AdminDataSeeder` — tự seed `admin@ticketing.com` lúc startup
-- [x] Endpoint `POST /api/v1/users/admin/create` — chỉ `ROLE_ADMIN` mới gọi được
-- [x] `SecurityConfig` — thêm rule `hasRole("ADMIN")` cho `/admin/**`
-- [x] `UserServiceTest` — 14 test cases (StepVerifier): register, login, refreshToken, verifyEmail, changePassword, getUserById
-- [x] `UserControllerTest` — 9 test cases (WebTestClient): HTTP status, `@WithMockUser`
-
----
-
-### 1.2 Build `api-gateway` (Port 8080)
-
-✅ Hoàn thành 2026-04-11
-
-- [x] `pom.xml` — spring-cloud-starter-gateway, Redis, JWT, common-dto/exception
-- [x] `JwtAuthFilter` — validate JWT, inject `X-User-Id` + `X-User-Role`, public routes bypass
-- [x] `RateLimitFilter` — Sliding Window Log với Redis Sorted Set, 2 mode PER_USER/PER_IP, fail open
-- [x] `CorrelationIdFilter` — GlobalFilter inject `X-Correlation-Id` + `X-Request-Id` vào mọi request
-- [x] `GatewayErrorWebExceptionHandler` — format `{"error": {"code","message","traceId"}}`, Retry-After header
-- [x] `GatewayConfig` — functional DSL routes cho 7 services, payment webhook route riêng (no JWT)
-- [x] `SecurityConfig` — tắt Spring Security defaults để tránh conflict với JwtAuthFilter
-- [x] `application.yml` — service URLs qua env vars, CORS, httpclient timeouts
-- [x] `JwtAuthFilterTest` — 7 test cases (public routes, valid token, expired, tampered, ADMIN role)
-- [x] `RateLimitFilterTest` — 5 test cases (under limit, over limit, fail open, PER_IP, fallback to IP)
-- [x] Đã fix Spring Boot 4.x → 3.4.4 (Spring Cloud 2024.0.x không tương thích Boot 4.x)
-- [x] Mockito subclass mock maker cho Java 25 compatibility
-- [x] GlobalExceptionHandler — thêm user error codes, import vào UserControllerTest
+- [x] Restructure 4 module → 2 module: `common-entity` + `common-base`
+- [x] Design patterns: Strategy, Observer, Builder, Template Method, Adapter
+- [x] `META-INF/spring/AutoConfiguration.imports` — auto-load tất cả configs
+- [x] `ApiResponse<T>`, `PageResponse<T>`, `PageRequest`
+- [x] `CacheStrategy`, `DistributedLock`, `RateLimiter` (Redis impl)
+- [x] `EventPublisher`, `EventConsumer`, `DomainEvent`
+- [x] `GlobalExceptionHandler`, `TicketingException` hierarchy
+- [x] `KafkaConfig`, `RedisConfig`, `RabbitMQConfig`, `WebFluxConfig`
 
 ---
 
-### 1.3 Build `event-catalog-service` (Port 8082)
+### 1.2 `user-service` ✅ Hoàn thành 2026-04-12
 
-Nền tảng cho booking. Dùng **MongoDB Reactive + @RestController**.
+**Auth & Profile:**
+- [x] Register, Login, RefreshToken, VerifyEmail
+- [x] ForgotPassword, ResetPassword, ChangePassword
+- [x] Profile CRUD, Preferences CRUD
+- [x] Soft delete, Deactivate, Reactivate account
+- [x] JWT generation + validation (JJWT 0.12.5)
+- [x] BCrypt password encoding
+- [x] `AdminDataSeeder` — seed admin user lúc startup
+- [x] `JwtAuthenticationFilter` — WebFilter extract + inject auth context
+- [x] `SecurityConfig` — CORS, public/protected routes, ADMIN role
 
-- [ ] Setup MongoDB Reactive, ánh xạ domain:
-  - `Event` document với `sealed interface EventDetail` (ConcertDetail / MovieDetail)
-  - `Venue` document
-- [ ] CRUD endpoints:
-  - `POST /api/v1/events` (ADMIN)
-  - `GET /api/v1/events/{id}` (public)
-  - `GET /api/v1/events?type=CONCERT&city=hanoi&page=0&size=20` (public, paginated)
-  - `PUT /api/v1/events/{id}` (ADMIN)
-  - `PUT /api/v1/events/{id}/status` (ADMIN — publish, cancel)
-  - `GET /api/v1/venues`, `POST /api/v1/venues` (ADMIN)
-- [ ] Seat management:
-  - `GET /api/v1/events/{id}/seats`
-  - Khi event được tạo → auto-generate seats theo venue zones
-- [ ] Kafka producer: publish `event.published`, `event.updated` sau mỗi thay đổi
-- [ ] Test: CRUD event, filter theo type/city, seat generation
+**Fixes đã xử lý:**
+- [x] R2DBC `Persistable<UUID>` — fix INSERT/UPDATE confusion
+- [x] Phone validation regex cho số VN: `^(\+?84|0)[3-9]\d{8}$`
+- [x] Login cho phép `PENDING_VERIFICATION` status
+- [x] CORS: `setAllowedOriginPatterns` thay vì wildcard origins
+- [x] Schema migration → `schema.sql` + `spring.sql.init`
+
+**Google OAuth2 (code xong, chờ credentials):**
+- [x] `GoogleOAuth2UserService` — upsert user từ Google profile
+- [x] `OAuth2SuccessHandler` — JWT → redirect FE `/auth/callback`
+- [x] `OAuth2FailureHandler` — redirect FE với error
+- [x] `SecurityConfig` — `.oauth2Login()` config
+- [x] `User` entity — thêm `googleId`, `authProvider (LOCAL|GOOGLE)`
+- [x] `schema.sql` — thêm `google_id`, `auth_provider`, `password_hash` nullable
+- [ ] **⚠️ Việc còn lại:** Điền `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` vào `application.yml`
+- [ ] **⚠️ Việc còn lại:** Drop & recreate bảng `users` để có column mới
+
+---
+
+### 1.3 `api-gateway` ✅ Hoàn thành 2026-04-11
+
+- [x] `JwtAuthFilter` — validate JWT, inject `X-User-Id` + `X-User-Role`
+- [x] `RateLimitFilter` — Sliding Window Log, PER_USER/PER_IP mode
+- [x] `CorrelationIdFilter` — inject `X-Correlation-Id` + `X-Request-Id`
+- [x] `GatewayErrorWebExceptionHandler` — format chuẩn error response
+- [x] Routes cho 7 services + Swagger aggregation `/v3/api-docs/{service}`
+- [x] Swagger UI aggregate tất cả services
+
+---
+
+### 1.4 `ticketing-client` 🟡 In Progress
+
+**Đã hoàn thành:**
+- [x] Setup React + Vite + TypeScript
+- [x] Dependencies: react-router-dom, axios, react-hook-form, zod, zustand, @tanstack/react-query
+- [x] `axiosInstance` — interceptor tự động attach JWT + refresh token
+- [x] `useAuthStore` (Zustand + persist localStorage)
+- [x] `PrivateRoute` + `PublicRoute`
+- [x] `LoginPage` — form + validation + nút Google OAuth2
+- [x] `RegisterPage` — form + success state
+- [x] `ForgotPasswordPage` — gửi link reset
+- [x] `ResetPasswordPage` — đặt mật khẩu mới từ token URL
+- [x] `CallbackPage` — nhận token OAuth2 từ URL → lưu store → redirect
+- [x] `HomePage` — navbar, search, hero, tab Concert/Phim, grid cards mock data
+- [x] Dark theme glassmorphism UI (CSS Modules)
+
+**Việc còn lại:**
+- [ ] Test Google OAuth2 end-to-end sau khi BE có credentials
+- [ ] Kết nối API thật khi `event-catalog-service` xong (thay mock data)
+- [ ] Trang chi tiết event
+- [ ] Trang booking flow
+- [ ] Trang "Vé của tôi"
+
+---
+
+### 1.5 Infrastructure ✅ Hoàn thành 2026-04-11
+
+- [x] `docker-compose.yml` — đầy đủ: Postgres, Redis, MongoDB, Kafka, Zookeeper, Elasticsearch, RabbitMQ, Zipkin
+- [x] UIs: Redis Insight `:5540`, Mongo Express `:8091`, Kafka UI `:9000`
+- [x] Init scripts: `scripts/postgres/init-multiple-dbs.sh`, `scripts/mongodb/init.js`
+- [x] Fix Mongo Express port `8081` → `8091` (conflict với user-service)
 
 ---
 
 ## Phase 2 — Core Business
 
-### 2.1 Build `booking-service` (Port 8083)
+### 2.1 `event-catalog-service` (Port 8082) 🔴 Next
 
-Service phức tạp nhất. Dùng **functional routing**.
+MongoDB Reactive + `@RestController`.
+
+- [ ] Domain: `Event` (sealed interface `ConcertDetail | MovieDetail`), `Venue`
+- [ ] CRUD Events: `POST`, `GET /{id}`, `GET ?type&city&page`, `PUT /{id}`, `PUT /{id}/status`
+- [ ] CRUD Venues: `GET`, `POST`
+- [ ] Seat management: `GET /events/{id}/seats`, auto-generate seats theo venue zones
+- [ ] Kafka producer: `event.published`, `event.updated`
+- [ ] Test: CRUD event, filter theo type/city, seat generation
+
+---
+
+### 2.2 `booking-service` (Port 8083) 🔴
+
+Functional routing — service phức tạp nhất.
 
 - [ ] Domain: `Booking`, `BookingItem`, `Ticket`
-- [ ] Redis seat locking — TTL 10 phút:
-  - `SETNX booking:seat:{seatId} {userId}` với TTL 600s
-  - Scheduler release expired locks
-- [ ] Booking flow:
-  - `POST /api/v1/bookings` — lock seats → tạo Booking `PENDING`
-  - `POST /api/v1/bookings/{id}/cancel` — release lock, đổi status `CANCELLED`
-  - `GET /api/v1/bookings/{id}` — chỉ owner hoặc ADMIN
-  - `GET /api/v1/bookings/my` — list của current user
-- [ ] Business rules:
-  - Tối đa 4 vé / user / event
-  - Không book nếu event `CANCELLED` hoặc `ENDED`
-  - `BookingItem.priceSnapshot` — snapshot giá tại thời điểm đặt
-- [ ] Kafka:
-  - Consume `payment.completed` → đổi Booking sang `PAID`, issue Ticket, publish `ticket.issued`
-  - Consume `payment.failed` → đổi sang `CANCELLED`, release lock
-  - Publish `booking.created`, `booking.expired`
-- [ ] Test: seat locking, max 4 vé, expire flow
+- [ ] Redis seat locking TTL 10 phút: `SETNX booking:seat:{seatId}`
+- [ ] `POST /api/v1/bookings` — lock seats → `PENDING`
+- [ ] `POST /api/v1/bookings/{id}/cancel` — release lock → `CANCELLED`
+- [ ] `GET /api/v1/bookings/{id}`, `GET /api/v1/bookings/my`
+- [ ] Business rules: max 4 vé/user/event, priceSnapshot
+- [ ] Kafka: consume `payment.completed/failed`, publish `booking.created/expired`, `ticket.issued`
 
 ---
 
-### 2.2 Build `payment-service` (Port 8084)
+### 2.3 `payment-service` (Port 8084) 🔴
 
-Dùng **functional routing** (webhook cần filter để verify signature).
+Functional routing — webhook cần verify signature.
 
 - [ ] Domain: `Payment`
-- [ ] Endpoints:
-  - `POST /api/v1/payments/initiate` — tạo Payment `PENDING`, trả về payment URL
-  - `POST /api/v1/payments/webhook/vnpay` — nhận callback từ VNPay
-  - `POST /api/v1/payments/webhook/momo` — nhận callback từ MoMo
-  - `POST /api/v1/payments/{id}/refund` (ADMIN only)
-  - `GET /api/v1/payments/{bookingId}`
-- [ ] Webhook filter: verify HMAC signature trước khi vào handler
-- [ ] Payment timeout: 15 phút — Kafka delayed event hoặc scheduler
+- [ ] `POST /api/v1/payments/initiate` → Payment URL
+- [ ] Webhook: `/webhook/vnpay`, `/webhook/momo` — verify HMAC
+- [ ] `POST /api/v1/payments/{id}/refund` (ADMIN)
+- [ ] Payment timeout 15 phút
 - [ ] Kafka: publish `payment.completed`, `payment.failed`
-- [ ] **Lưu ý**: Dùng mock payment gateway cho dev/test, cấu hình real keys qua env
 
 ---
 
-### 2.3 Build `notification-service` (Port 8085)
+### 2.4 `notification-service` (Port 8085) 🔴
 
 Chỉ consume Kafka, không có HTTP controller.
 
-- [ ] Kafka consumers:
-  - `booking.created` → Email "Đặt chỗ thành công, chờ thanh toán"
-  - `booking.expired` → Email "Booking đã hết hạn"
-  - `payment.completed` → Email "Thanh toán thành công, vé đính kèm"
-  - `payment.failed` → Email "Thanh toán thất bại"
-  - `ticket.issued` → Email đính kèm QR code vé
-- [ ] Email template: HTML Thymeleaf hoặc Freemarker
-- [ ] SMTP config: Mailgun hoặc SendGrid (cấu hình qua env)
-- [ ] Test: EmbeddedKafka, assert email content
+- [ ] Kafka consumers: `booking.created/expired`, `payment.completed/failed`, `ticket.issued`
+- [ ] Email templates HTML (Thymeleaf/Freemarker)
+- [ ] SMTP: Mailgun hoặc SendGrid
 
 ---
 
 ## Phase 3 — Enhancement
 
-### 3.1 Build `search-service` (Port 8086)
-
+### 3.1 `search-service` (Port 8086)
 - [ ] Elasticsearch index `events`
-- [ ] Consume Kafka `event.published`, `event.updated` → upsert vào Elasticsearch
-- [ ] Endpoint: `GET /api/v1/search/events?q=coldplay&type=CONCERT&city=hanoi&date=2025-12`
-- [ ] Full-text search + filter + sort theo date/price
-- [ ] Autocomplete suggest: `GET /api/v1/search/suggest?q=cold`
+- [ ] Consume `event.published/updated` → upsert ES
+- [ ] Full-text search + filter + autocomplete suggest
 
-### 3.2 Build `cms-service` (Port 8087)
-
+### 3.2 `cms-service` (Port 8087)
 - [ ] MongoDB: `HomepageConfig`, `Banner`, `FeaturedEvent`
-- [ ] CRUD config homepage: banner, featured events, categories (ADMIN only)
-- [ ] Public endpoint: `GET /api/v1/cms/homepage` — trả về cấu hình trang chủ
+- [ ] ADMIN CRUD + public `GET /api/v1/cms/homepage`
 
-### 3.3 Build `media-service` (Port 8088)
-
-- [ ] Multipart upload → resize 3 kích thước (thumbnail / card / banner) → upload Cloudflare R2
-- [ ] Trả về CDN URL: `https://cdn.ticketing.com/events/{eventId}/{size}.webp`
-- [ ] Kafka: publish `media.uploaded` → event-catalog-service cập nhật URL ảnh
-- [ ] Endpoint: `POST /api/v1/media/upload` (ADMIN only)
+### 3.3 `media-service` (Port 8088)
+- [ ] Multipart upload → resize → Cloudflare R2
+- [ ] CDN URL: `https://cdn.ticketing.com/events/{eventId}/{size}.webp`
+- [ ] Kafka: `media.uploaded`
 
 ---
 
 ## Phase 4 — Production Readiness
 
-- [ ] Distributed tracing: Micrometer + Zipkin (add agent mỗi service)
-- [ ] Spring Cloud Config Server: tách config ra file riêng theo env
-- [ ] Eureka Server: service discovery
-- [ ] Docker Compose cập nhật: thêm tất cả service + MongoDB + Elasticsearch
-- [ ] CI/CD: GitHub Actions — build + test + Docker image push
-- [ ] Môi trường: `dev` / `staging` / `prod` profiles
+- [ ] Distributed tracing: Micrometer + Zipkin
+- [ ] Spring Cloud Config Server
+- [ ] Eureka Server — service discovery
+- [ ] CI/CD: GitHub Actions — build + test + Docker push
+- [ ] `dev` / `staging` / `prod` profiles
+
+---
+
+## ⚠️ Việc cần làm ngay (blockers)
+
+| # | Việc | Lý do |
+|---|------|-------|
+| 1 | Điền `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` vào `user-service/application.yml` | Google OAuth2 chưa hoạt động |
+| 2 | Recreate bảng `users` (thêm `google_id`, `auth_provider`) | Schema cũ chưa có columns mới |
+| 3 | Test Google OAuth2 end-to-end | Verify flow hoàn chỉnh |
+| 4 | Build `event-catalog-service` | FE đang dùng mock data, cần API thật |
 
 ---
 
 ## Thứ tự build tiếp theo
 
 ```
-user-service (fix) → api-gateway → event-catalog-service
-    → booking-service → payment-service → notification-service
+⚠️ Finish Google OAuth2 (credentials + test)
+  → event-catalog-service (replace mock data FE)
+    → booking-service + payment-service (song song)
+      → notification-service
         → search-service → cms-service → media-service
-            → production readiness
+          → production readiness
 ```
-
-**Lý do thứ tự này:**
-- `api-gateway` cần sớm để test flow xuyên suốt từ Phase 2
-- `event-catalog-service` là dependency của `booking-service`
-- `booking-service` + `payment-service` phải đi liền nhau (Kafka coupling chặt)
-- `notification-service` có thể build song song với Phase 2 vì chỉ consume Kafka
 
 ---
 
-*Cập nhật file này khi hoàn thành một service hoặc thay đổi thứ tự ưu tiên.*
+*Cập nhật: 2026-04-12 — Cập nhật trạng thái sau session làm việc ngày 12/04.*

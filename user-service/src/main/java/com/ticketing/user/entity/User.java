@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -20,7 +22,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("users")
-public class User {
+public class User implements Persistable<UUID> {
+
+    @Transient
+    private boolean isNew = false;
 
     @Id
     @Column("id")
@@ -67,6 +72,21 @@ public class User {
 
     @Column("deleted_at")
     private LocalDateTime deletedAt;
+
+    @Column("google_id")
+    private String googleId;
+
+    @Column("auth_provider")
+    private AuthProvider authProvider;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    public enum AuthProvider {
+        LOCAL, GOOGLE
+    }
 
     /**
      * User status enumeration

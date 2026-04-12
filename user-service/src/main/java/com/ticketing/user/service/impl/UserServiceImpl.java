@@ -60,6 +60,7 @@ public class UserServiceImpl implements UserService {
     private Mono<UserResponse> createUser(RegisterRequest request) {
         User user = User.builder()
                 .id(UUID.randomUUID())
+                .isNew(true)
                 .email(request.getEmail().toLowerCase())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
@@ -78,6 +79,7 @@ public class UserServiceImpl implements UserService {
                     // Create default preferences
                     UserPreferences preferences = UserPreferences.builder()
                             .id(UUID.randomUUID())
+                            .isNew(true)
                             .userId(savedUser.getId())
                             .emailNotifications(true)
                             .smsNotifications(false)
@@ -96,7 +98,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Mono<LoginResponse> login(LoginRequest request) {
-        return userRepository.findActiveUserByEmail(request.getEmail())
+        return userRepository.findByEmail(request.getEmail())
+                .filter(user -> user.getDeletedAt() == null)
+                .filter(user -> user.getStatus() != User.UserStatus.SUSPENDED
+                        && user.getStatus() != User.UserStatus.DELETED)
                 .filter(user -> passwordEncoder.matches(request.getPassword(), user.getPasswordHash()))
                 .switchIfEmpty(Mono.error(new InvalidCredentialsException("Invalid email or password")))
                 .flatMap(user -> {
@@ -232,6 +237,7 @@ public class UserServiceImpl implements UserService {
                     String token = UUID.randomUUID().toString();
                     VerificationToken verificationToken = VerificationToken.builder()
                             .id(UUID.randomUUID())
+                            .isNew(true)
                             .userId(user.getId())
                             .token(token)
                             .tokenType(VerificationToken.TokenType.EMAIL_VERIFICATION)
@@ -255,6 +261,7 @@ public class UserServiceImpl implements UserService {
                     String token = UUID.randomUUID().toString();
                     VerificationToken resetToken = VerificationToken.builder()
                             .id(UUID.randomUUID())
+                            .isNew(true)
                             .userId(user.getId())
                             .token(token)
                             .tokenType(VerificationToken.TokenType.PASSWORD_RESET)
@@ -390,6 +397,7 @@ public class UserServiceImpl implements UserService {
                     }
                     User admin = User.builder()
                             .id(UUID.randomUUID())
+                            .isNew(true)
                             .email(request.getEmail().toLowerCase())
                             .passwordHash(passwordEncoder.encode(request.getPassword()))
                             .firstName(request.getFirstName())
@@ -407,6 +415,7 @@ public class UserServiceImpl implements UserService {
                 .flatMap(savedAdmin -> {
                     UserPreferences preferences = UserPreferences.builder()
                             .id(UUID.randomUUID())
+                            .isNew(true)
                             .userId(savedAdmin.getId())
                             .emailNotifications(true)
                             .smsNotifications(false)

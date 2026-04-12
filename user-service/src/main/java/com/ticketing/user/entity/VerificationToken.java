@@ -5,21 +5,23 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * Email verification token entity
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("verification_tokens")
-public class VerificationToken {
+public class VerificationToken implements Persistable<UUID> {
+
+    @Transient
+    private boolean isNew = false;
 
     @Id
     @Column("id")
@@ -43,12 +45,13 @@ public class VerificationToken {
     @Column("created_at")
     private LocalDateTime createdAt;
 
-    /**
-     * Token type enumeration
-     */
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
     public enum TokenType {
         EMAIL_VERIFICATION,
         PASSWORD_RESET
     }
 }
-

@@ -5,20 +5,22 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.util.UUID;
 
-/**
- * User preferences entity
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("user_preferences")
-public class UserPreferences {
+public class UserPreferences implements Persistable<UUID> {
+
+    @Transient
+    private boolean isNew = false;
 
     @Id
     @Column("id")
@@ -47,5 +49,9 @@ public class UserPreferences {
 
     @Column("marketing_emails")
     private Boolean marketingEmails;
-}
 
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+}
