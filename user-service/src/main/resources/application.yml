@@ -4,31 +4,49 @@ spring:
 
   # R2DBC Configuration
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/ticketing
-    username: postgres
-    password: postgres
+    url: r2dbc:postgresql://localhost:5432/user_db
+    username: ticketing
+    password: ticketing123
     pool:
       initial-size: 5
       max-size: 20
       max-idle-time: 30m
 
-  # SQL Initialization
+  # SQL Initialization — R2DBC dùng schema.sql ở resources root
   sql:
     init:
-      mode: always
+      mode: never
+      schema-locations: classpath:schema.sql
   
 
   # Redis Configuration
   data:
     redis:
       host: localhost
-      port: 32769
+      port: 6379
       timeout: 2000ms
       lettuce:
         pool:
           max-active: 8
           max-idle: 8
           min-idle: 0
+
+  # Google OAuth2
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+            scope: email, profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
 
   # Kafka Configuration
   kafka:
@@ -38,10 +56,15 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
       group-id: user-service-group
-      key-deserializer: org.apache.kafka.common.deserialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.deserialization.StringDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
 
+
+# App config
+app:
+  oauth2:
+    redirect-uri: http://localhost:5173/auth/callback
 
 # JWT Configuration
 jwt:

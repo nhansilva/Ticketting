@@ -39,7 +39,7 @@ public class RegisterRequest {
     @Size(min = 1, max = 50, message = "Last name must be between 1 and 50 characters")
     private String lastName;
 
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Phone number must be valid")
+    @Pattern(regexp = "^(\\+?84|0)[3-9]\\d{8}$", message = "Phone number must be valid")
     private String phoneNumber;
 
     @Past(message = "Date of birth must be in the past")

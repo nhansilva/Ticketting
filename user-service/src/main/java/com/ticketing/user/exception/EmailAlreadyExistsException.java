@@ -1,17 +1,12 @@
 package com.ticketing.user.exception;
 
+import com.ticketing.common.dto.constants.Constants;
 import com.ticketing.common.exception.TicketingException;
+import org.springframework.http.HttpStatus;
 
-/**
- * Exception thrown when email already exists
- */
 public class EmailAlreadyExistsException extends TicketingException {
-    public EmailAlreadyExistsException(String message) {
-        super(message, "EMAIL_ALREADY_EXISTS");
-    }
 
-    public EmailAlreadyExistsException(String message, Throwable cause) {
-        super(message, "EMAIL_ALREADY_EXISTS", cause);
+    public EmailAlreadyExistsException(String email) {
+        super("Email already exists: " + email, Constants.ErrorCodes.EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
     }
 }
-

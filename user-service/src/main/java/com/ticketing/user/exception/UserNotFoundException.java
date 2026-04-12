@@ -1,18 +1,12 @@
 package com.ticketing.user.exception;
 
-import com.ticketing.common.exception.TicketingException;
 import com.ticketing.common.dto.constants.Constants;
+import com.ticketing.common.exception.TicketingException;
+import org.springframework.http.HttpStatus;
 
-/**
- * Exception thrown when user is not found
- */
 public class UserNotFoundException extends TicketingException {
-    public UserNotFoundException(String message) {
-        super(message, "USER_NOT_FOUND");
-    }
 
-    public UserNotFoundException(String message, Throwable cause) {
-        super(message, "USER_NOT_FOUND", cause);
+    public UserNotFoundException(String message) {
+        super(message, Constants.ErrorCodes.USER_NOT_FOUND, HttpStatus.NOT_FOUND);
     }
 }
-

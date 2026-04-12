@@ -1,17 +1,12 @@
 package com.ticketing.user.exception;
 
+import com.ticketing.common.dto.constants.Constants;
 import com.ticketing.common.exception.TicketingException;
+import org.springframework.http.HttpStatus;
 
-/**
- * Exception thrown when credentials are invalid
- */
 public class InvalidCredentialsException extends TicketingException {
-    public InvalidCredentialsException(String message) {
-        super(message, "INVALID_CREDENTIALS");
-    }
 
-    public InvalidCredentialsException(String message, Throwable cause) {
-        super(message, "INVALID_CREDENTIALS", cause);
+    public InvalidCredentialsException(String message) {
+        super(message, Constants.ErrorCodes.INVALID_CREDENTIALS, HttpStatus.UNAUTHORIZED);
     }
 }
-

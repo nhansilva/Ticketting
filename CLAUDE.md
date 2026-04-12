@@ -573,6 +573,28 @@ void shouldReturn201WhenBookingCreated() {
 4. **Chỉ ra ngay** nếu code có nguy cơ block Netty thread
 5. **Gợi ý Kafka topic** nếu một action trong service nên trigger event sang service khác
 6. Khi viết test, luôn dùng **StepVerifier** — không dùng `.block()` trong test
+7. **Ghi lesson learned** — sau mỗi lần fix lỗi, append entry mới vào `LESSONS_LEARNED.md` theo format:
+   ```
+   ### [service-name] Tên lỗi ngắn gọn
+   - **Lỗi:** Message lỗi cụ thể
+   - **Nguyên nhân:** Root cause
+   - **Fix:** Code hoặc config thay đổi
+   - **Note:** Điều cần nhớ để tránh lần sau
+   ```
+   File nằm ở: `LESSONS_LEARNED.md` (root project), group theo ngày `## YYYY-MM-DD`
+
+8. **Ghi worklog hàng ngày** — cuối mỗi session hoặc khi user yêu cầu, append actions vào file `worklog/YYYY-MM-DD.md`:
+   - Mỗi ngày là 1 file riêng: `worklog/2026-04-12.md`
+   - Format:
+     ```
+     # Worklog — YYYY-MM-DD
+     ## Tổng kết ngày
+     ## Actions thực hiện (nhóm theo service/area)
+     ## Bugs fixed
+     ## Đang làm dở (nếu có)
+     ```
+   - Ghi **action cụ thể**: file nào thay đổi, config nào cập nhật, feature nào hoàn thành
+   - Nếu file ngày hôm đó chưa tồn tại → tạo mới; đã tồn tại → append vào cuối
 
 ---
 
