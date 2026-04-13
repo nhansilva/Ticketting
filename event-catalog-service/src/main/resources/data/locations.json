@@ -1,0 +1,31 @@
+{
+  "provinces": [
+    {"code": "HN", "name": "Hà Nội"},
+    {"code": "HCM", "name": "TP. Hồ Chí Minh"},
+    {"code": "DN", "name": "Đà Nẵng"},
+    {"code": "HP", "name": "Hải Phòng"},
+    {"code": "CT", "name": "Cần Thơ"},
+    {"code": "BD", "name": "Bình Dương"},
+    {"code": "BH", "name": "Bình Thuận"},
+    {"code": "LA", "name": "Long An"},
+    {"code": "DL", "name": "Đà Lạt"},
+    {"code": "KH", "name": "Khánh Hòa"}
+  ],
+  "districts": [
+    {"code": "HN-HK", "name": "Hoàn Kiếm", "parentCode": "HN"},
+    {"code": "HN-BD", "name": "Ba Đình", "parentCode": "HN"},
+    {"code": "HN-DDA", "name": "Đống Đa", "parentCode": "HN"},
+    {"code": "HN-HBT", "name": "Hai Bà Trưng", "parentCode": "HN"},
+    {"code": "HN-CG", "name": "Cầu Giấy", "parentCode": "HN"},
+    {"code": "HCM-Q1", "name": "Quận 1", "parentCode": "HCM"},
+    {"code": "HCM-Q3", "name": "Quận 3", "parentCode": "HCM"},
+    {"code": "HCM-Q7", "name": "Quận 7", "parentCode": "HCM"},
+    {"code": "HCM-BT", "name": "Bình Thạnh", "parentCode": "HCM"},
+    {"code": "HCM-TD", "name": "Thủ Đức", "parentCode": "HCM"},
+    {"code": "DN-HC", "name": "Hải Châu", "parentCode": "DN"},
+    {"code": "DN-ST", "name": "Sơn Trà", "parentCode": "DN"},
+    {"code": "DN-NT", "name": "Ngũ Hành Sơn", "parentCode": "DN"},
+    {"code": "HP-HB", "name": "Hồng Bàng", "parentCode": "HP"},
+    {"code": "HP-NK", "name": "Ngô Quyền", "parentCode": "HP"}
+  ]
+}
