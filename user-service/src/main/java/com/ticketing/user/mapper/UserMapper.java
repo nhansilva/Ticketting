@@ -4,6 +4,8 @@ import com.ticketing.user.dto.response.UserPreferencesResponse;
 import com.ticketing.user.dto.response.UserResponse;
 import com.ticketing.user.entity.User;
 import com.ticketing.user.entity.UserPreferences;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Builder;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -13,6 +15,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
+    @BeanMapping(builder = @Builder(disableBuilder = true))
     @Mapping(source = "id", target = "userId")
     @Mapping(target = "status", expression = "java(user.getStatus() != null ? user.getStatus().name() : null)")
     @Mapping(target = "role", expression = "java(user.getRole() != null ? user.getRole().name() : null)")
