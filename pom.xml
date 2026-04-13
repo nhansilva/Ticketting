@@ -47,6 +47,7 @@
         <module>common</module>
         <module>user-service</module>
         <module>api-gateway</module>
+        <module>event-catalog-service</module>
     </modules>
 
     <dependencyManagement>
