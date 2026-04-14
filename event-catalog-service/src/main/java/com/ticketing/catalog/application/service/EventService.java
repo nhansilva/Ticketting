@@ -13,6 +13,7 @@ import com.ticketing.catalog.domain.model.enums.EventType;
 import com.ticketing.catalog.domain.repository.EventRepository;
 import com.ticketing.catalog.domain.repository.VenueRepository;
 import com.ticketing.catalog.infrastructure.mapper.EventMapper;
+import com.ticketing.common.cache.redis.RedisCacheStrategy;
 import com.ticketing.common.dto.constants.Constants;
 import com.ticketing.common.dto.enums.EventStatus;
 import com.ticketing.common.exception.domain.ConflictException;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -41,6 +43,7 @@ public class EventService {
     private final SeatService seatService;
     @SuppressWarnings("rawtypes")
     private final EventPublisher eventPublisher;
+    private final RedisCacheStrategy<EventResponse> cacheStrategy;
 
     public Mono<EventResponse> createEvent(CreateEventRequest request, String createdBy) {
         return venueRepository.findById(request.venueId())
@@ -58,9 +61,11 @@ public class EventService {
     }
 
     public Mono<EventResponse> findById(String id) {
-        return eventRepository.findById(id)
-            .switchIfEmpty(Mono.error(new EventNotFoundException(id)))
-            .map(eventMapper::toResponse);
+        String cacheKey = Constants.RedisKeys.EVENT_CACHE + id;
+        return cacheStrategy.getOrLoad(cacheKey, Duration.ofMinutes(30),
+            () -> eventRepository.findById(id)
+                .switchIfEmpty(Mono.error(new EventNotFoundException(id)))
+                .map(eventMapper::toResponse));
     }
 
     public Flux<EventSummaryResponse> findAll(EventType type, EventStatus status, int page, int size) {
@@ -96,6 +101,7 @@ public class EventService {
                 event.setUpdatedAt(LocalDateTime.now());
                 return eventRepository.save(event);
             })
+            .flatMap(saved -> cacheStrategy.evict(Constants.RedisKeys.EVENT_CACHE + id).thenReturn(saved))
             .flatMap(saved -> publishEventUpdated(saved).thenReturn(saved))
             .map(eventMapper::toResponse);
     }
@@ -104,6 +110,7 @@ public class EventService {
         return eventRepository.findById(id)
             .switchIfEmpty(Mono.error(new EventNotFoundException(id)))
             .flatMap(event -> validateAndTransition(event, request.status()))
+            .flatMap(saved -> cacheStrategy.evict(Constants.RedisKeys.EVENT_CACHE + id).thenReturn(saved))
             .map(eventMapper::toResponse);
     }
 
@@ -120,6 +127,7 @@ public class EventService {
                 return seatService.deleteByEvent(id)
                     .then(eventRepository.save(event));
             })
+            .flatMap(saved -> cacheStrategy.evict(Constants.RedisKeys.EVENT_CACHE + id).thenReturn(saved))
             .map(eventMapper::toResponse);
     }
 

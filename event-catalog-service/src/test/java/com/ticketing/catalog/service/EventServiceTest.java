@@ -16,6 +16,7 @@ import com.ticketing.catalog.domain.model.enums.EventType;
 import com.ticketing.catalog.domain.repository.EventRepository;
 import com.ticketing.catalog.domain.repository.VenueRepository;
 import com.ticketing.catalog.infrastructure.mapper.EventMapper;
+import com.ticketing.common.cache.redis.RedisCacheStrategy;
 import com.ticketing.common.dto.enums.EventStatus;
 import com.ticketing.common.messaging.EventPublisher;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,8 @@ class EventServiceTest {
     @Mock EventMapper eventMapper;
     @Mock SeatService seatService;
     @Mock EventPublisher eventPublisher;
+    @SuppressWarnings("unchecked")
+    @Mock RedisCacheStrategy<EventResponse> cacheStrategy;
     @InjectMocks EventService eventService;
 
     private Venue sampleVenue() {
@@ -104,6 +107,10 @@ class EventServiceTest {
     @Test
     void shouldThrowWhenEventNotFound() {
         when(eventRepository.findById("not-exist")).thenReturn(Mono.empty());
+        when(cacheStrategy.getOrLoad(anyString(), any(), any())).thenAnswer(inv -> {
+            java.util.function.Supplier<Mono<EventResponse>> loader = inv.getArgument(2);
+            return loader.get();
+        });
 
         StepVerifier.create(eventService.findById("not-exist"))
             .expectError(EventNotFoundException.class)
@@ -133,6 +140,7 @@ class EventServiceTest {
         when(seatService.generateSeats(anyString(), any())).thenReturn(Flux.empty());
         when(eventRepository.save(any())).thenReturn(Mono.just(updatedEvent));
         when(eventPublisher.publish(anyString(), anyString(), any())).thenReturn(Mono.empty());
+        when(cacheStrategy.evict(anyString())).thenReturn(Mono.empty());
         when(eventMapper.toResponse(any())).thenReturn(response);
 
         StepVerifier.create(eventService.updateStatus("e1", request))
