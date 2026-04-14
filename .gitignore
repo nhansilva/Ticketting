@@ -38,3 +38,6 @@ application-dev.properties
 # Docker
 docker-compose.override.yml
 
+# Git worktrees
+.worktrees/
+

@@ -14,7 +14,7 @@
 | `user-service` | 🟢 Done | Auth, profile, JWT, Google OAuth2 code xong |
 | `api-gateway` | 🟢 Done | JWT filter, rate limit, correlation ID |
 | `ticketing-client` | 🟡 In Progress | Auth pages ✅, Home ✅, Google OAuth2 callback ✅ — cần test e2e |
-| `event-catalog-service` | 🔴 Chưa bắt đầu | Next priority |
+| `event-catalog-service` | 🟢 Done | CRUD event/venue/seat, Kafka producer, Redis cache, location seeder |
 | `booking-service` | 🔴 Chưa bắt đầu | — |
 | `payment-service` | 🔴 Chưa bắt đầu | — |
 | `notification-service` | 🔴 Chưa bắt đầu | — |
@@ -118,7 +118,7 @@
 
 ## Phase 2 — Core Business
 
-### 2.1 `event-catalog-service` (Port 8082) 🔴 Next
+### 2.1 `event-catalog-service` (Port 8082) 🟢 Done
 
 MongoDB Reactive + `@RestController`.
 
