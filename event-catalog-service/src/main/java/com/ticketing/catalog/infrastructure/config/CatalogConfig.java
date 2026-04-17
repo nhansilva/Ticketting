@@ -5,6 +5,7 @@ import com.ticketing.catalog.api.dto.response.EventResponse;
 import com.ticketing.common.cache.redis.RedisCacheStrategy;
 import com.ticketing.common.messaging.EventPublisher;
 import com.ticketing.common.messaging.kafka.KafkaEventPublisher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
@@ -20,7 +21,7 @@ public class CatalogConfig {
 
     @Bean
     public RedisCacheStrategy<EventResponse> eventCacheStrategy(
-            ReactiveRedisTemplate<String, String> redisTemplate,
+            @Qualifier("reactiveRedisTemplate") ReactiveRedisTemplate<String, String> redisTemplate,
             ObjectMapper objectMapper) {
         return new RedisCacheStrategy<>(redisTemplate, objectMapper, EventResponse.class);
     }
