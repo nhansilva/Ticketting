@@ -125,3 +125,12 @@
 - **Fix:** Code hoặc config thay đổi
 - **Note:** Điều cần nhớ để tránh lần sau
 ```
+
+## 2026-04-17
+
+### [event-catalog-service] ReactiveRedisTemplate bean ambiguity khi startup
+
+- **Lỗi:** `Parameter 0 of method eventCacheStrategy required a single bean, but 2 were found: reactiveRedisTemplate, reactiveStringRedisTemplate`
+- **Nguyên nhân:** Spring Boot auto-config (`RedisReactiveAutoConfiguration`) tạo thêm bean `reactiveStringRedisTemplate` cùng type `ReactiveRedisTemplate<String, String>`, trong khi `common-base`'s `RedisConfig` cũng tạo bean `reactiveRedisTemplate` cùng type — Spring không biết chọn cái nào.
+- **Fix:** Thêm `@Qualifier("reactiveRedisTemplate")` vào parameter của `CatalogConfig.eventCacheStrategy()` để chỉ định dùng bean từ common-base.
+- **Note:** Bất kỳ service nào inject `ReactiveRedisTemplate<String, String>` từ `common-base` cần thêm `@Qualifier("reactiveRedisTemplate")` nếu dùng `@Bean` method injection. Với `@Autowired`/`@RequiredArgsConstructor` field injection, dùng `@Qualifier` ở field.
