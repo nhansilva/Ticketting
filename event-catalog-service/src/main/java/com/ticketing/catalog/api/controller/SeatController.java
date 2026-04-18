@@ -20,7 +20,7 @@ public class SeatController {
     @GetMapping
     public Mono<ApiResponse<Map<String, List<SeatResponse>>>> getSeats(
             @PathVariable String eventId,
-            @RequestParam(required = false) String zone) {
+            @RequestParam(name = "zone", required = false) String zone) {
         return seatService.findByEvent(eventId, zone).map(ApiResponse::success);
     }
 }

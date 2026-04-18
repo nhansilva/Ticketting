@@ -34,7 +34,7 @@ public class VenueController {
 
     @GetMapping
     public Mono<ApiResponse<List<VenueResponse>>> listVenues(
-            @RequestParam(required = false) String provinceCode) {
+            @RequestParam(name = "provinceCode", required = false) String provinceCode) {
         return venueService.findAll(provinceCode).collectList().map(ApiResponse::success);
     }
 
