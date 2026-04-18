@@ -51,10 +51,10 @@ public class EventController {
 
     @GetMapping
     public Mono<ApiResponse<List<EventSummaryResponse>>> listEvents(
-            @RequestParam(required = false) EventType type,
-            @RequestParam(required = false) EventStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "type", required = false) EventType type,
+            @RequestParam(name = "status", required = false) EventStatus status,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return eventService.findAll(type, status, page, size)
             .collectList()
             .map(ApiResponse::success);

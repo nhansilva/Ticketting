@@ -6,7 +6,7 @@ spring:
     name: event-catalog-service
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/ticketing_catalog}
+      uri: ${MONGODB_URI:mongodb://ticketing:ticketing123@localhost:27017/ticketing_catalog?authSource=admin}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
