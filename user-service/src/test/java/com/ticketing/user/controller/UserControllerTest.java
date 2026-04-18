@@ -1,6 +1,5 @@
 package com.ticketing.user.controller;
 
-import com.ticketing.common.dto.response.ApiResponse;
 import com.ticketing.user.dto.request.LoginRequest;
 import com.ticketing.user.dto.request.RegisterRequest;
 import com.ticketing.user.dto.response.LoginResponse;

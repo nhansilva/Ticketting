@@ -3,7 +3,6 @@ package com.ticketing.user.service;
 import com.ticketing.user.dto.request.ChangePasswordRequest;
 import com.ticketing.user.dto.request.LoginRequest;
 import com.ticketing.user.dto.request.RegisterRequest;
-import com.ticketing.user.dto.response.LoginResponse;
 import com.ticketing.user.dto.response.UserResponse;
 import com.ticketing.user.entity.User;
 import com.ticketing.user.entity.UserPreferences;
